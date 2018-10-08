@@ -115,33 +115,22 @@ func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, ke
 	if err != nil {
 		return None
 	}
-	//fmt.Println(moving_i)
-	//fmt.Println(moving_j)
-	//fmt.Println(padded_message[moving_i:moving_j])
 	if count < number_of_blocks {
-		//fmt.Println("Count is", count)
-
 		block.Decrypt(decipher_11, ciphertext[moving_i:moving_j])
-		IV = ciphertext[moving_i:moving_j]
-		moving_i += 16
-		moving_j += 16
-		//fmt.Println("Value of k is", k)
-
-		//fmt.Println(padded_message[j])
-		//fmt.Println(IV[k])
 		for k := 0; k < 16; k++ {
 			decipher_1[k] = IV[k] ^ decipher_11[k]
 		}
-		final_decrypted_cipher = append(final_decrypted_cipher, decipher_11...)
+		IV = ciphertext[moving_i:moving_j]
+		moving_i += 16
+		moving_j += 16
+
+		final_decrypted_cipher = append(final_decrypted_cipher, decipher_1...)
 		count += 1
-		decrypt_CBC(IV, ciphertext, final_decrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
+
+		return decrypt_CBC(IV, ciphertext, final_decrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
+	} else {
+		return final_decrypted_cipher
 	}
-
-	//fmt.Println("Final Encrypted Cipher is \n", final_decrypted_cipher)
-	//fmt.Printf("%x \n", final_decrypted_cipher)
-
-	return final_decrypted_cipher
-
 }
 
 func encrypt_mac(message []byte, token [32]byte, kenc []byte) []byte {
@@ -184,13 +173,8 @@ func encrypt_CBC(IV []byte, padded_message []byte, final_encrypted_cipher []byte
 	}
 
 	if count < number_of_blocks {
-		//fmt.Println("Count is", count)
 		k := 0
 		for j := moving_i; j < moving_j; j++ {
-			//fmt.Println("Value of k is", k)
-
-			//fmt.Println(padded_message[j])
-			//fmt.Println(IV[k])
 			cipher_1[k] = padded_message[j] ^ IV[k]
 			k += 1
 		}
@@ -202,8 +186,6 @@ func encrypt_CBC(IV []byte, padded_message []byte, final_encrypted_cipher []byte
 		moving_i += 16
 		moving_j += 16
 
-		//fmt.Println("Final Encrypted Cipher is \n", final_encrypted_cipher)
-		//fmt.Printf("%x \n", final_encrypted_cipher)
 		return encrypt_CBC(IV, padded_message, final_encrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
 	} else {
 		return final_encrypted_cipher
@@ -244,14 +226,12 @@ func main() {
 	fmt.Println("Plaintext is", formatName)
 
 	returnstr := gen_hmac(formatName, kmac)
-	fmt.Printf("HMAC is ", returnstr)
+	fmt.Println("HMAC is ", returnstr)
 	fmt.Printf("\n")
 
 	return_encrypt_mac := encrypt_mac(formatName, returnstr, kenc)
-	fmt.Println("Final HMAC is", return_encrypt_mac)
+	fmt.Println("Final Encrypted Value is", return_encrypt_mac)
 
 	return_decrypt_mac := decrypt_mac(return_encrypt_mac, kenc)
-	fmt.Printf("The decrypted value is %s", return_decrypt_mac)
-	//fmt.Println("\nAnswer:", hex.EncodeToString(returnstr[:]))
-	//fmt.Println(formatName)
+	fmt.Println("The Decrypted value is", return_decrypt_mac)
 }
