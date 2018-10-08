@@ -2,22 +2,11 @@
 package main
 
 import "fmt"
-
-//import "log"
 import "os"
-
-//import "encoding/hex"
 import "crypto/sha256"
-
-//import "math"
 import "crypto/rand"
-
 import "crypto/aes"
 import "reflect"
-
-//import "crypto/rand"
-//import "crypto/aes"
-//import "flag"
 import "io/ioutil"
 
 func gen_hmac(message, key []byte) []byte {
@@ -156,7 +145,6 @@ func encrypt_CBC(IV []byte, padded_message []byte, final_encrypted_cipher []byte
 	if err != nil {
 		return None
 	}
-
 	if count < number_of_blocks {
 		k := 0
 		for j := moving_i; j < moving_j; j++ {
