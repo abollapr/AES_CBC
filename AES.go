@@ -2,17 +2,22 @@
 package main
 
 import "fmt"
-import "log"
+
+//import "log"
 import "os"
-import "encoding/hex"
+
+//import "encoding/hex"
 import "crypto/sha256"
-import "math"
+
+//import "math"
 import "crypto/rand"
+
+import "crypto/aes"
 
 //import "crypto/rand"
 //import "crypto/aes"
 //import "flag"
-//import "io/ioutil"
+import "io/ioutil"
 
 func gen_hmac(message, key []byte) [32]byte {
 	//fmt.Println(key)
@@ -20,7 +25,7 @@ func gen_hmac(message, key []byte) [32]byte {
 	for i := 16; i < 64; i++ {
 		key = append(key, c)
 	}
-	//fmt.Println(key)
+	fmt.Println("Key is", key)
 
 	var opad []byte
 	for i := 0; i < 64; i++ {
@@ -39,115 +44,233 @@ func gen_hmac(message, key []byte) [32]byte {
 		i_key_pad[i] = key[i] ^ ipad[i]
 	}
 
-	//fmt.Println(i_key_pad)
+	fmt.Println("O key pad", o_key_pad)
 	//var second_message []byte
-	//i_key_pad = append(i_key_pad, message...)
+	i_key_pad = append(i_key_pad, message...)
 	//fmt.Println(message)
-	//fmt.Println(i_key_pad)
+	fmt.Println("length of i key pad", len(i_key_pad))
 
 	//h := sha256.New()
 	//h.Write(i_key_pad)
 	//fmt.Printf("%x", h.Sum(nil))
 	hash1 := sha256.Sum256(i_key_pad)
+	fmt.Println("Hash 1 is", hash1)
 	o_key_pad = append(o_key_pad, hash1[:]...)
 
+	fmt.Println("o_key_pad + hash1", o_key_pad)
 	//k := sha256.New()
 	//k.Write(o_key_pad)
 	//return k.Sum256(nil)
 	hash2 := sha256.Sum256(o_key_pad)
+	fmt.Println("hash 2 is", hash2)
 	return hash2
 
 }
 
 func compute_padding(message []byte) []byte {
-	fmt.Println(message)
-	fmt.Println(len(string(message)))
+	//fmt.Println(message)
+	//fmt.Println(len(string(message)))
 	n := len(string(message)) % 16
-	fmt.Println("The value if n is", n)
+	//fmt.Println("The value if n is", n)
 	PS := 16 - n
+	//padding_variable := math.Pow(float64(PS), 2)
 	var padding []byte
-	var buf [8]byte //Assuming that the
-	padding_variable := math.Pow(float64(PS), 2)
-	fmt.Println("The padding variabe is", padding_variable)
-	fmt.Println("The buf is", buf)
+	//fmt.Println("The padding variabe is", padding_variable)
 	if n != 0 {
 		for i := 0; i < PS; i++ {
-			padding = append(padding, byte(padding_variable))
+			padding = append(padding, byte(PS))
 		}
 	}
-	//	else {
-	//		for i := 0; i <16; i++ {
-	//			padding = append(padding, 16...)
-	//		}
-	//	}
+	fmt.Println("Padding is", padding)
 	return padding
 }
 
-func aes_cbc_encrypt(message []byte) (string, error) {
-	bytes := make([]byte, 64)
+func generate_IV(message []byte) ([]byte, error) {
+	bytes := make([]byte, 16)
+	var None []byte
 	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+		return None, err
 	}
-	return hex.EncodeToString(bytes), nil
+	return bytes, nil
 }
 
-func encrypt_mac(message []byte, token [32]byte) []byte {
+func decrypt_mac(ciphertext []byte, kenc []byte) []byte {
+	number_of_blocks_decrypt := len(ciphertext) / 16
+	var final_decrypted_cipher []byte
+	count := 0
+	moving_i := 0
+	moving_j := 16
+	//TO DO: HAVE TO PASS THE IV PARAMETER IN THE FUNCTION. HARDCODING IT FOR NOW.
+	IV := []byte("1111111111111111")
+	final_decrypted_cipher = decrypt_CBC(IV, ciphertext, final_decrypted_cipher, kenc, number_of_blocks_decrypt, count, moving_i, moving_j)
+	return final_decrypted_cipher
+}
+
+func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, kenc []byte, number_of_blocks int, count int, moving_i int, moving_j int) []byte {
+	decipher_1 := make([]byte, 16)
+	decipher_11 := make([]byte, 16)
+
+	var None []byte
+	block, err := aes.NewCipher(kenc)
+	if err != nil {
+		return None
+	}
+	//fmt.Println(moving_i)
+	//fmt.Println(moving_j)
+	//fmt.Println(padded_message[moving_i:moving_j])
+	if count < number_of_blocks {
+		//fmt.Println("Count is", count)
+
+		block.Decrypt(decipher_11, ciphertext[moving_i:moving_j])
+		IV = ciphertext[moving_i:moving_j]
+		moving_i += 16
+		moving_j += 16
+		//fmt.Println("Value of k is", k)
+
+		//fmt.Println(padded_message[j])
+		//fmt.Println(IV[k])
+		for k := 0; k < 16; k++ {
+			decipher_1[k] = IV[k] ^ decipher_11[k]
+		}
+		final_decrypted_cipher = append(final_decrypted_cipher, decipher_11...)
+		count += 1
+		decrypt_CBC(IV, ciphertext, final_decrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
+	}
+
+	fmt.Println("Final Encrypted Cipher is \n", final_decrypted_cipher)
+	fmt.Printf("%x \n", final_decrypted_cipher)
+
+	return final_decrypted_cipher
+
+}
+
+func encrypt_mac(message []byte, token [32]byte, kenc []byte) []byte {
 	var M_1 []byte
 	token_slice := token[:]
 	M_1 = append(message, token_slice...)
-	fmt.Println("M_1 is", M_1)
+	//fmt.Println("M_1 is", M_1)
 	//returnstr := compute_padding(M_1)
-	M_1 = append(M_1, compute_padding(M_1)...)
-	encrypted_cipher, _ := aes_cbc_encrypt(M_1)
-	fmt.Println(encrypted_cipher)
+	padded_message := append(M_1, compute_padding(M_1)...)
 
-	return M_1
+	IV := []byte("1111111111111111")
+	fmt.Println("IV is:", IV)
 
+	//IV, _ := generate_IV(M_1)
+
+	fmt.Println("the padded message is", padded_message)
+
+	number_of_blocks := len(padded_message) / 16
+	//fmt.Println(number_of_blocks)
+	//blocks := [][]byte{}
+
+	var final_encrypted_cipher []byte
+	count := 0
+	moving_i := 0
+	moving_j := 16
+
+	encrypt_CBC(IV, padded_message, final_encrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
+
+	return final_encrypted_cipher
 }
 
-func readNextBytes(file *os.File, number int) []byte {
-	bytes := make([]byte, number)
+func encrypt_CBC(IV []byte, padded_message []byte, final_encrypted_cipher []byte, kenc []byte, number_of_blocks int, count int, moving_i int, moving_j int) []byte {
+	cipher_1 := make([]byte, 16)
+	cipher_11 := make([]byte, 16)
 
-	_, err := file.Read(bytes)
+	var None []byte
+	block, err := aes.NewCipher(kenc)
 	if err != nil {
-		log.Fatal(err)
+		return None
+	}
+	//fmt.Println(moving_i)
+	//fmt.Println(moving_j)
+	//fmt.Println(padded_message[moving_i:moving_j])
+	if count < number_of_blocks {
+		//fmt.Println("Count is", count)
+		k := 0
+		for j := moving_i; j < moving_j; j++ {
+			//fmt.Println("Value of k is", k)
+
+			//fmt.Println(padded_message[j])
+			//fmt.Println(IV[k])
+			cipher_1[k] = padded_message[j] ^ IV[k]
+			k += 1
+		}
+		block.Encrypt(cipher_11, cipher_1)
+		final_encrypted_cipher = append(final_encrypted_cipher, cipher_11...)
+
+		IV = cipher_11
+		count += 1
+		moving_i += 16
+		moving_j += 16
+		encrypt_CBC(IV, padded_message, final_encrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
 	}
 
-	return bytes
+	fmt.Println("Final Encrypted Cipher is \n", final_encrypted_cipher)
+	fmt.Printf("%x \n", final_encrypted_cipher)
+
+	return final_encrypted_cipher
+
 }
+
+//blocks = append(blocks, padded_message[0:16])
+//blocks = append(blocks, padded_message[16:32])
+//blocks = append(blocks, padded_message[32:48])
+
+//	for i := 0; i < number_of_blocks; i++ {
+//		//fmt.Println(index_1)
+//		//fmt.Println(index_2)
+//		to_be_added_block := padded_message[index_1:index_2]
+
+//		blocks = append(blocks, to_be_added_block...)
+//		fmt.Println(blocks)
+//		index_1 += 16
+//		index_2 += 16
+//	}
+//fmt.Print(blocks)
 
 func main() {
 	//if len(os.Args[1]) < 32 {
 
 	//decoded := []byte(os.Args[1])
-	s := os.Args[1]
+	//	s := os.Args[1]
 
-	decoded, err := hex.DecodeString(s)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//fmt.Println(decoded)
+	//	decoded, err := hex.DecodeString(s)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	//fmt.Println(decoded)
 
-	//kenc := decoded[:16]
-	kmac := decoded[16:]
+	//	kenc := decoded[:16]
+	//	kmac := decoded[16:]
+
+	//------JUGAAD---
+	temp := []byte("1111111111111111")
+	kenc := temp
+	kmac := temp
+
+	fmt.Println("kenc is", kenc)
+	fmt.Println("kmac is", kmac)
 
 	//fmt.Println(kmac)
 
-	//data_message, err_message := ioutil.ReadFile(os.Args[2])
-	//data_message_1 := []byte(data_message)
-	//fmt.Println(err_message)
+	formatName, err := ioutil.ReadFile(os.Args[2])
+	if err != nil {
+		fmt.Println("Can't read file:", os.Args[2])
+		panic(err)
+	}
 
-	file, err := os.Open(os.Args[2])
-	//input_file := os.Args[2]
-	formatName := readNextBytes(file, 9)
-	fmt.Println(err)
+	fmt.Println("Plaintext is", formatName)
 
 	returnstr := gen_hmac(formatName, kmac)
-	fmt.Printf("HMAC is %x", returnstr)
+	fmt.Printf("HMAC is ", returnstr)
 	fmt.Printf("\n")
 
-	return_encrypt_mac := encrypt_mac(formatName, returnstr)
-	fmt.Println(return_encrypt_mac)
+	return_encrypt_mac := encrypt_mac(formatName, returnstr, kenc)
+	fmt.Println("Final HMAC is", return_encrypt_mac)
+
+	return_decrypt_mac := decrypt_mac(return_encrypt_mac, kenc)
+	fmt.Printf("The decrypted value is %s", return_decrypt_mac)
 	//fmt.Println("\nAnswer:", hex.EncodeToString(returnstr[:]))
 	//fmt.Println(formatName)
 }
