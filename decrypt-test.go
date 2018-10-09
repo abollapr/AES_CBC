@@ -2,10 +2,12 @@
 package main
 
 import "fmt"
+
 import "os"
 import "crypto/sha256"
 import "crypto/aes"
 import "reflect"
+
 import "io/ioutil"
 
 func gen_hmac(message, key []byte) []byte {
@@ -107,11 +109,16 @@ func verify_hmac_padding(ciphertext []byte, kmac []byte) string {
 }
 
 func main() {
-	formatName, err := ioutil.ReadFile(os.Args[1])
-	if err != nil {
-		//fmt.Println("Can't read file:", os.Args[2])
-		panic(err)
-	}
+
+	ciphertext, _ := os.Open("output.txt")
+	formatName, _ := ioutil.ReadAll(ciphertext)
+	//fmt.Println("Format name is", formatName)
+
+	//formatName, err := ioutil.ReadFile(ciphertext)
+	//if err != nil {
+	//fmt.Println("Can't read file:", os.Args[2])
+	//panic(err)
+	//}
 
 	kenc := []byte("1111111111111111")
 	return_decrypt_mac := decrypt_mac(formatName, kenc)
@@ -122,7 +129,6 @@ func main() {
 		fmt.Println(error_verify)
 	} else {
 		fmt.Println(error_verify)
-
 	}
 
 }
