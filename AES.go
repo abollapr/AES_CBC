@@ -59,7 +59,7 @@ func compute_padding(message []byte) []byte {
 		}
 	} else {
 		for i := 0; i < 16; i++ {
-			padding = append(padding, byte(16))
+			padding = append(padding, 16)
 		}
 	}
 	fmt.Println("Padding is", padding)
@@ -124,6 +124,7 @@ func encrypt_mac(message []byte, token []byte, kenc []byte) []byte {
 
 	IV := []byte("1111111111111111")
 	IV_with_final_encrypted_cipher := IV
+
 	fmt.Println("IV is:", IV)
 
 	//IV, _ := generate_IV(M_1)
@@ -231,7 +232,7 @@ func main() {
 
 	err = ioutil.WriteFile(os.Args[3], return_encrypt_mac, 0644)
 	if err != nil {
-		fmt.Println("Can't write to file:", os.Args[3])
+		fmt.Println("Can't write to file:", os.Args[7])
 		panic(err)
 
 	}
