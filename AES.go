@@ -57,6 +57,10 @@ func compute_padding(message []byte) []byte {
 		for i := 0; i < PS; i++ {
 			padding = append(padding, byte(PS))
 		}
+	} else {
+		for i := 0; i < 16; i++ {
+			padding = append(padding, byte(16))
+		}
 	}
 	fmt.Println("Padding is", padding)
 	return padding
@@ -119,6 +123,7 @@ func encrypt_mac(message []byte, token []byte, kenc []byte) []byte {
 	padded_message := append(M_1, compute_padding(M_1)...)
 
 	IV := []byte("1111111111111111")
+	IV_with_final_encrypted_cipher := IV
 	fmt.Println("IV is:", IV)
 
 	//IV, _ := generate_IV(M_1)
@@ -132,8 +137,8 @@ func encrypt_mac(message []byte, token []byte, kenc []byte) []byte {
 	moving_j := 16
 
 	final_encrypted_cipher = encrypt_CBC(IV, padded_message, final_encrypted_cipher, kenc, number_of_blocks, count, moving_i, moving_j)
-
-	return final_encrypted_cipher
+	IV_with_final_encrypted_cipher = append(IV_with_final_encrypted_cipher, final_encrypted_cipher...)
+	return IV_with_final_encrypted_cipher
 }
 
 func encrypt_CBC(IV []byte, padded_message []byte, final_encrypted_cipher []byte, kenc []byte, number_of_blocks int, count int, moving_i int, moving_j int) []byte {
@@ -166,22 +171,22 @@ func encrypt_CBC(IV []byte, padded_message []byte, final_encrypted_cipher []byte
 }
 
 func verify_hmac_padding(ciphertext []byte, kmac []byte) (string, []byte) {
+	//padding_int := byte(32)
 	padding_int := ciphertext[len(ciphertext)-1]
 	var None []byte
 	for j := len(ciphertext) - 1; j > len(ciphertext)-(int(padding_int)+1); j-- {
-		fmt.Println("the value of j is", j)
 		if ciphertext[j] != padding_int {
 			return "INVALID PADDING", None
 		}
 	}
 	var HMAC []byte
 	HMAC = ciphertext[len(ciphertext)-(int(padding_int)+32) : len(ciphertext)-int(padding_int)]
-	to_be_verified_HMAC := gen_hmac(ciphertext[:len(ciphertext)-(int(padding_int)+32)], kmac)
+	to_be_verified_HMAC := gen_hmac(ciphertext[16:len(ciphertext)-(int(padding_int)+32)], kmac)
 	HMAC_validation := reflect.DeepEqual(HMAC, to_be_verified_HMAC)
 	if HMAC_validation != true {
 		return "INVALID HMAC", None
 	}
-	return "Success!", ciphertext[:len(ciphertext)-(int(padding_int)+32)]
+	return "Success!", ciphertext[16 : len(ciphertext)-(int(padding_int)+32)]
 
 }
 
@@ -223,6 +228,13 @@ func main() {
 
 	return_encrypt_mac := encrypt_mac(formatName, returnstr, kenc)
 	fmt.Println("Final Encrypted Value is", return_encrypt_mac)
+
+	err = ioutil.WriteFile(os.Args[3], return_encrypt_mac, 0644)
+	if err != nil {
+		fmt.Println("Can't write to file:", os.Args[3])
+		panic(err)
+
+	}
 
 	return_decrypt_mac := decrypt_mac(return_encrypt_mac, kenc)
 	fmt.Println("The Decrypted value is", return_decrypt_mac)
