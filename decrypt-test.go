@@ -89,23 +89,41 @@ func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, ke
 	}
 }
 
-func verify_hmac_padding(ciphertext []byte, kmac []byte) string {
+func verify_hmac_padding(ciphertext []byte, kmac []byte) {
+
 	//padding_int := byte(32)
-	padding_int := ciphertext[len(ciphertext)-1]
-	for j := len(ciphertext) - 1; j > len(ciphertext)-(int(padding_int)+1); j-- {
-		if ciphertext[j] != padding_int {
-			return "INVALID PADDING"
+	length_of_ciphertext := len(ciphertext)
+	padding_int := ciphertext[length_of_ciphertext-1]
+	//fmt.Println("Padding int is:", padding_int)
+	if int(padding_int) != 0 {
+		for j := len(ciphertext) - 1; j >= len(ciphertext)-(int(padding_int)); j-- {
+			if ciphertext[j] != padding_int {
+				fmt.Println("INVALID PADDING")
+				os.Exit(1)
+			}
+		}
+	} else {
+
+		fmt.Println("INVALID PADDING")
+		os.Exit(1)
+
+	}
+
+	HMAC := make([]byte, 32)
+	// JUGAAADDDD-----
+	if len(ciphertext) <= 32 {
+		fmt.Println("INVALID HMAC")
+	} else {
+		HMAC = ciphertext[len(ciphertext)-(int(padding_int)+32) : len(ciphertext)-int(padding_int)]
+		to_be_verified_HMAC := gen_hmac(ciphertext[16:len(ciphertext)-(int(padding_int)+32)], kmac)
+		HMAC_validation := reflect.DeepEqual(HMAC, to_be_verified_HMAC)
+		if HMAC_validation != true {
+			fmt.Println("INVALID HMAC")
+			//os.Exit(1)
+		} else {
+			fmt.Println("Success!")
 		}
 	}
-	var HMAC []byte
-	HMAC = ciphertext[len(ciphertext)-(int(padding_int)+32) : len(ciphertext)-int(padding_int)]
-	to_be_verified_HMAC := gen_hmac(ciphertext[16:len(ciphertext)-(int(padding_int)+32)], kmac)
-	HMAC_validation := reflect.DeepEqual(HMAC, to_be_verified_HMAC)
-	if HMAC_validation != true {
-		return "INVALID HMAC"
-	}
-	return "Success!"
-
 }
 
 func main() {
@@ -124,11 +142,11 @@ func main() {
 	return_decrypt_mac := decrypt_mac(formatName, kenc)
 	//fmt.Println("The Decrypted value is", return_decrypt_mac)
 
-	error_verify := verify_hmac_padding(return_decrypt_mac, kenc)
-	if error_verify == "Success!" {
-		fmt.Println(error_verify)
-	} else {
-		fmt.Println(error_verify)
-	}
+	verify_hmac_padding(return_decrypt_mac, kenc)
+	//	if error_verify == "Success!" {
+	//		fmt.Println(error_verify)
+	//	} else {
+	//		fmt.Println(error_verify)
+	//	}
 
 }
