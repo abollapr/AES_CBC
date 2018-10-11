@@ -10,12 +10,10 @@ import "reflect"
 import "io/ioutil"
 
 func gen_hmac(message, key []byte) []byte {
-	//fmt.Println(key)
 	var c byte = 00
 	for i := 16; i < 64; i++ {
 		key = append(key, c)
 	}
-	fmt.Println("Key is", key)
 
 	var opad []byte
 	for i := 0; i < 64; i++ {
@@ -34,17 +32,12 @@ func gen_hmac(message, key []byte) []byte {
 		i_key_pad[i] = key[i] ^ ipad[i]
 	}
 
-	fmt.Println("O key pad", o_key_pad)
 	i_key_pad = append(i_key_pad, message...)
-	fmt.Println("length of i key pad", len(i_key_pad))
 
 	hash1 := sha256.Sum256(i_key_pad)
-	fmt.Println("Hash 1 is", hash1)
 	o_key_pad = append(o_key_pad, hash1[:]...)
 
-	fmt.Println("o_key_pad + hash1", o_key_pad)
 	hash2 := sha256.Sum256(o_key_pad)
-	fmt.Println("hash 2 is", hash2)
 	return hash2[:]
 
 }
@@ -62,7 +55,6 @@ func compute_padding(message []byte) []byte {
 			padding = append(padding, 16)
 		}
 	}
-	fmt.Println("Padding is", padding)
 	return padding
 }
 
@@ -118,18 +110,10 @@ func encrypt_mac(message []byte, token []byte, kenc []byte) []byte {
 	var M_1 []byte
 	token_slice := token[:]
 	M_1 = append(message, token_slice...)
-	//fmt.Println("M_1 is", M_1)
-	//returnstr := compute_padding(M_1)
 	padded_message := append(M_1, compute_padding(M_1)...)
 
 	IV := []byte("1111111111111111")
 	IV_with_final_encrypted_cipher := IV
-
-	fmt.Println("IV is:", IV)
-
-	//IV, _ := generate_IV(M_1)
-
-	fmt.Println("the padded message is", padded_message)
 
 	number_of_blocks := len(padded_message) / 16
 	var final_encrypted_cipher []byte
@@ -211,12 +195,6 @@ func main() {
 	temp := []byte("1111111111111111")
 	kenc := temp
 	kmac := temp
-
-	fmt.Println("kenc is", kenc)
-	fmt.Println("kmac is", kmac)
-
-	//fmt.Println(kmac)
-
 	formatName, err := ioutil.ReadFile(os.Args[2])
 	if err != nil {
 		fmt.Println("Can't read file:", os.Args[2])
@@ -239,7 +217,6 @@ func main() {
 	}
 
 	return_decrypt_mac := decrypt_mac(return_encrypt_mac, kenc)
-	fmt.Println("The lenght of Decrypted value is", return_decrypt_mac)
 
 	error_verify, text := verify_hmac_padding(return_decrypt_mac, kmac)
 	if error_verify == "Success!" {

@@ -11,12 +11,10 @@ import "reflect"
 import "io/ioutil"
 
 func gen_hmac(message, key []byte) []byte {
-	//fmt.Println(key)
 	var c byte = 00
 	for i := 16; i < 64; i++ {
 		key = append(key, c)
 	}
-	//fmt.Println("Key is", key)
 
 	var opad []byte
 	for i := 0; i < 64; i++ {
@@ -35,17 +33,12 @@ func gen_hmac(message, key []byte) []byte {
 		i_key_pad[i] = key[i] ^ ipad[i]
 	}
 
-	//fmt.Println("O key pad", o_key_pad)
 	i_key_pad = append(i_key_pad, message...)
-	//fmt.Println("length of i key pad", len(i_key_pad))
 
 	hash1 := sha256.Sum256(i_key_pad)
-	//fmt.Println("Hash 1 is", hash1)
 	o_key_pad = append(o_key_pad, hash1[:]...)
 
-	//fmt.Println("o_key_pad + hash1", o_key_pad)
 	hash2 := sha256.Sum256(o_key_pad)
-	//fmt.Println("hash 2 is", hash2)
 	return hash2[:]
 
 }
@@ -73,8 +66,6 @@ func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, ke
 	}
 	if count < number_of_blocks {
 		block.Decrypt(decipher_11, ciphertext[moving_i:moving_j])
-		//fmt.Println("Decrypted block is", decipher_11)
-		//fmt.Println("IV is", IV)
 		for k := 0; k < 16; k++ {
 			decipher_1[k] = IV[k] ^ decipher_11[k]
 		}
@@ -93,14 +84,10 @@ func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, ke
 
 func verify_hmac_padding(ciphertext []byte, kmac []byte) {
 
-	//padding_int := byte(32)
-	//fmt.Println("The plaintext is", ciphertext)
 	length_of_ciphertext := len(ciphertext)
 	padding_int := ciphertext[length_of_ciphertext-1]
-	//fmt.Println("Padding int is:", padding_int)
 	if int(padding_int) != 0 {
 		for j := len(ciphertext) - 1; j >= len(ciphertext)-(int(padding_int)); j-- {
-			//fmt.Println("Plaintext at position ", ciphertext[j])
 			if ciphertext[j] != padding_int {
 				fmt.Println("INVALID PADDING")
 				os.Exit(1)
@@ -147,10 +134,4 @@ func main() {
 	//fmt.Println("The Decrypted value is", return_decrypt_mac)
 
 	verify_hmac_padding(return_decrypt_mac, kenc)
-	//	if error_verify == "Success!" {
-	//		fmt.Println(error_verify)
-	//	} else {
-	//		fmt.Println(error_verify)
-	//	}
-
 }
