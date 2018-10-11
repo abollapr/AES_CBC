@@ -78,9 +78,9 @@ func generate_IV(message []byte) ([]byte, error) {
 func decrypt_mac(ciphertext []byte, kenc []byte) []byte {
 	number_of_blocks_decrypt := len(ciphertext) / 16
 	var final_decrypted_cipher []byte
-	count := 0
-	moving_i := 0
-	moving_j := 16
+	count := 1
+	moving_i := 16
+	moving_j := 32
 	//TO DO: HAVE TO PASS THE IV PARAMETER IN THE FUNCTION. HARDCODING IT FOR NOW.
 	IV := []byte("1111111111111111")
 	final_decrypted_cipher = decrypt_CBC(IV, ciphertext, final_decrypted_cipher, kenc, number_of_blocks_decrypt, count, moving_i, moving_j)
@@ -181,13 +181,14 @@ func verify_hmac_padding(ciphertext []byte, kmac []byte) (string, []byte) {
 		}
 	}
 	var HMAC []byte
+
 	HMAC = ciphertext[len(ciphertext)-(int(padding_int)+32) : len(ciphertext)-int(padding_int)]
-	to_be_verified_HMAC := gen_hmac(ciphertext[16:len(ciphertext)-(int(padding_int)+32)], kmac)
+	to_be_verified_HMAC := gen_hmac(ciphertext[:len(ciphertext)-(int(padding_int)+32)], kmac)
 	HMAC_validation := reflect.DeepEqual(HMAC, to_be_verified_HMAC)
 	if HMAC_validation != true {
 		return "INVALID HMAC", None
 	}
-	return "Success!", ciphertext[16 : len(ciphertext)-(int(padding_int)+32)]
+	return "Success!", ciphertext[:len(ciphertext)-(int(padding_int)+32)]
 
 }
 
@@ -238,7 +239,7 @@ func main() {
 	}
 
 	return_decrypt_mac := decrypt_mac(return_encrypt_mac, kenc)
-	fmt.Println("The Decrypted value is", return_decrypt_mac)
+	fmt.Println("The lenght of Decrypted value is", return_decrypt_mac)
 
 	error_verify, text := verify_hmac_padding(return_decrypt_mac, kmac)
 	if error_verify == "Success!" {

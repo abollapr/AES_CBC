@@ -73,6 +73,8 @@ func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, ke
 	}
 	if count < number_of_blocks {
 		block.Decrypt(decipher_11, ciphertext[moving_i:moving_j])
+		//fmt.Println("Decrypted block is", decipher_11)
+		//fmt.Println("IV is", IV)
 		for k := 0; k < 16; k++ {
 			decipher_1[k] = IV[k] ^ decipher_11[k]
 		}
@@ -92,11 +94,13 @@ func decrypt_CBC(IV []byte, ciphertext []byte, final_decrypted_cipher []byte, ke
 func verify_hmac_padding(ciphertext []byte, kmac []byte) {
 
 	//padding_int := byte(32)
+	//fmt.Println("The plaintext is", ciphertext)
 	length_of_ciphertext := len(ciphertext)
 	padding_int := ciphertext[length_of_ciphertext-1]
 	//fmt.Println("Padding int is:", padding_int)
 	if int(padding_int) != 0 {
 		for j := len(ciphertext) - 1; j >= len(ciphertext)-(int(padding_int)); j-- {
+			//fmt.Println("Plaintext at position ", ciphertext[j])
 			if ciphertext[j] != padding_int {
 				fmt.Println("INVALID PADDING")
 				os.Exit(1)
